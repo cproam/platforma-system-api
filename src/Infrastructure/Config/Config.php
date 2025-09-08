@@ -1,0 +1,81 @@
+<?php declare(strict_types=1);
+
+namespace App\Infrastructure\Config;
+
+final class Config
+{
+    private static ?array $cache = null;
+    private static bool $envLoaded = false;
+
+    public static function get(string $key, mixed $default = null): mixed
+    {
+        $config = self::load();
+        $segments = explode('.', $key);
+        $value = $config;
+        foreach ($segments as $segment) {
+            if (!is_array($value) || !array_key_exists($segment, $value)) {
+                return $default;
+            }
+            $value = $value[$segment];
+        }
+        return $value;
+    }
+
+    public static function dbPath(): string
+    {
+        return (string) self::get('db.path', dirname(__DIR__, 3) . '/var/data.sqlite');
+    }
+
+    public static function env(string $name, ?string $default = null): ?string
+    {
+        self::ensureEnvLoaded();
+        $val = getenv($name);
+        return $val === false ? $default : $val;
+    }
+
+    public static function jwtSecret(): string
+    {
+        return self::env('JWT_SECRET') ?? (string) self::get('jwt.secret', 'dev-secret-change-me');
+    }
+
+    public static function jwtTtl(): int
+    {
+        $val = self::env('JWT_TTL');
+        return $val !== null ? (int)$val : (int) self::get('jwt.ttl', 3600);
+    }
+
+    public static function jwtAlg(): string
+    {
+        return self::env('JWT_ALG') ?? (string) self::get('jwt.alg', 'HS256');
+    }
+
+    private static function load(): array
+    {
+        if (self::$cache !== null) {
+            return self::$cache;
+        }
+        $file = dirname(__DIR__, 3) . '/config/parameters.php';
+        self::$cache = file_exists($file) ? (require $file) : [];
+        self::ensureEnvLoaded();
+        return self::$cache;
+    }
+
+    private static function ensureEnvLoaded(): void
+    {
+        if (self::$envLoaded) { return; }
+        $root = dirname(__DIR__, 3);
+        $envFile = $root . '/.env';
+        if (is_file($envFile) && is_readable($envFile)) {
+            foreach (file($envFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) as $line) {
+                if (str_starts_with(trim($line), '#')) { continue; }
+                if (!str_contains($line, '=')) { continue; }
+                [$k, $v] = array_map('trim', explode('=', $line, 2));
+                $v = trim($v, "\"' ");
+                putenv("$k=$v");
+                $_ENV[$k] = $v;
+                $_SERVER[$k] = $v;
+            }
+        }
+        self::$envLoaded = true;
+    }
+}

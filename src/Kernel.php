@@ -1,0 +1,159 @@
+<?php declare(strict_types=1);
+
+namespace App;
+
+use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpFoundation\JsonResponse;
+use Symfony\Component\Routing\RouteCollection;
+use Symfony\Component\Routing\Matcher\UrlMatcher;
+use Symfony\Component\Routing\RequestContext;
+use Symfony\Component\Routing\Exception\ResourceNotFoundException;
+use App\Infrastructure\DI\Container;
+use App\Infrastructure\Security\JwtService;
+use Doctrine\ORM\EntityManagerInterface;
+use App\Entity\LogEntry;
+use App\Entity\User;
+use App\Entity\Role;
+
+final class Kernel
+{
+    public function __construct(private readonly RouteCollection $routes, private readonly ?Container $container = null) {}
+
+    public function handle(Request $request): Response
+    {
+        $context = (new RequestContext())->fromRequest($request);
+        $matcher = new UrlMatcher($this->routes, $context);
+
+        try {
+            $parameters = $matcher->match($request->getPathInfo());
+            $controller = $parameters['_controller'] ?? null;
+            $requiredMethod = ($parameters['_method'] ?? null) ? strtoupper((string)$parameters['_method']) : null;
+            if ($requiredMethod && $request->getMethod() !== $requiredMethod) {
+                return $this->logAndRespond($request, 405, 'Method Not Allowed');
+            }
+
+            // Authentication: allow /auth/login without token, require JWT otherwise
+            $path = $request->getPathInfo();
+            $status = 200;
+            $message = null;
+            $userId = null;
+            $ip = $request->getClientIp() ?: ($request->server->get('REMOTE_ADDR') ?? null);
+            if ($path !== '/auth/login') {
+                $authHeader = $request->headers->get('Authorization', '');
+                if (!preg_match('/^Bearer\s+(.*)$/i', $authHeader, $m)) {
+                    // Anonymous flow: map to anon user by IP
+                    /** @var EntityManagerInterface $em */
+                    $em = $this->container?->get(EntityManagerInterface::class);
+                    if ($em) {
+                        $userId = $this->getOrCreateAnonUserId($em, $ip);
+                        $anon = $em->find(User::class, $userId);
+                        if ($anon && $anon->isBanned()) {
+                            return $this->logAndRespond($request, 403, 'banned');
+                        }
+                        $request->attributes->set('auth', ['sub' => $userId, 'role' => 'anon']);
+                    }
+                } else {
+                    $token = $m[1];
+                    try {
+                        /** @var JwtService $jwt */
+                        $jwt = $this->container?->get(JwtService::class);
+                        $claims = $jwt->verify($token);
+                        $userId = isset($claims['sub']) ? (int)$claims['sub'] : null;
+                        $request->attributes->set('auth', $claims);
+                        // Check ban for authenticated users as well
+                        /** @var EntityManagerInterface $em */
+                        $em = $this->container?->get(EntityManagerInterface::class);
+                        if ($em && $userId) {
+                            $user = $em->find(User::class, $userId);
+                            if ($user && $user->isBanned()) {
+                                return $this->logAndRespond($request, 403, 'banned');
+                            }
+                        }
+                    } catch (\Throwable) {
+                        return $this->logAndRespond($request, 401, 'Invalid token');
+                    }
+                }
+            }
+
+            if (is_callable($controller)) {
+                return $controller($request, $parameters);
+            }
+
+            if (is_string($controller) && str_contains($controller, '::')) {
+                [$class, $method] = explode('::', $controller, 2);
+                if (class_exists($class) && method_exists($class, $method)) {
+                    $instance = $this->container?->get($class) ?? new $class();
+                    $response = $instance->$method($request, $parameters);
+                    // Log success
+                    try {
+                        /** @var EntityManagerInterface $em */
+                        $em = $this->container?->get(EntityManagerInterface::class);
+                        if ($em) {
+                            $userIdForLog = $userId;
+                            $log = new LogEntry($request->getMethod(), $request->getPathInfo(), $response->getStatusCode(), null, $userIdForLog, $ip);
+                            $em->persist($log);
+                            $em->flush();
+                        }
+                    } catch (\Throwable) {}
+                    return $response;
+                }
+            }
+
+            return $this->logAndRespond($request, 500, 'Controller not found');
+        } catch (ResourceNotFoundException) {
+            return $this->logAndRespond($request, 404, 'Not Found');
+        } catch (\Throwable) {
+            return $this->logAndRespond($request, 500, 'Server Error');
+        }
+    }
+
+    private function logAndRespond(Request $request, int $status, ?string $message): Response
+    {
+        try {
+            /** @var EntityManagerInterface $em */
+            $em = $this->container?->get(EntityManagerInterface::class);
+            if ($em) {
+                $claims = (array) $request->attributes->get('auth', []);
+                $uid = isset($claims['sub']) ? (int)$claims['sub'] : null;
+                $ip = $request->getClientIp() ?: ($request->server->get('REMOTE_ADDR') ?? null);
+                $log = new LogEntry($request->getMethod(), $request->getPathInfo(), $status, $message, $uid, $ip);
+                $em->persist($log);
+                $em->flush();
+            }
+        } catch (\Throwable) {
+            // ignore logging failures
+        }
+        $payload = [
+            'error' => [
+                'code' => $status,
+                'message' => $message ?? '',
+            ],
+            'path' => $request->getPathInfo(),
+            'method' => $request->getMethod(),
+            'requestId' => bin2hex(random_bytes(8)),
+        ];
+        return new JsonResponse($payload, $status);
+    }
+
+    private function getOrCreateAnonUserId(EntityManagerInterface $em, ?string $ip): int
+    {
+        $roleRepo = $em->getRepository(Role::class);
+        $anonRole = $roleRepo->findOneBy(['name' => 'anon']);
+        if (!$anonRole) {
+            $anonRole = new Role('anon');
+            $em->persist($anonRole);
+            $em->flush();
+        }
+        $email = ($ip ?: 'unknown') . '@anon.local';
+        $userRepo = $em->getRepository(User::class);
+        $user = $userRepo->findOneBy(['email' => $email]);
+        if (!$user) {
+            $anonKey = bin2hex(random_bytes(16));
+            $user = new User($email, '', $anonRole, $ip, false, $anonKey);
+            $em->persist($user);
+            $em->flush();
+        }
+        return $user->getId() ?? 0;
+    }
+}
