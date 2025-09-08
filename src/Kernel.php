@@ -60,17 +60,7 @@ final class Kernel
             if ($path !== '/auth/login') {
                 $authHeader = $request->headers->get('Authorization', '');
                 if (!preg_match('/^Bearer\s+(.*)$/i', $authHeader, $m)) {
-                    // Anonymous flow: map to anon user by IP
-                    /** @var EntityManagerInterface $em */
-                    $em = $this->container?->get(EntityManagerInterface::class);
-                    if ($em) {
-                        $userId = $this->getOrCreateAnonUserId($em, $ip);
-                        $anon = $em->find(User::class, $userId);
-                        if ($anon && $anon->isBanned()) {
-                            return $this->logAndRespond($request, 403, 'banned');
-                        }
-                        $request->attributes->set('auth', ['sub' => $userId, 'role' => 'anon']);
-                    }
+                    return $this->logAndRespond($request, 401, 'Unauthorized');
                 } else {
                     $token = $m[1];
                     try {

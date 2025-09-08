@@ -40,6 +40,11 @@ $routes->add('franchise_create', new Route('/franchises/create', [
     '_method' => 'POST',
 ]));
 
+$routes->add('franchise_view', new Route('/franchise/{id}', [
+    '_controller' => FranchiseController::class . '::view',
+    '_method' => 'GET',
+]));
+
 $routes->add('franchise_add_comment', new Route('/franchises/{id}/comments', [
     '_controller' => FranchiseController::class . '::addComment',
     '_method' => 'POST',

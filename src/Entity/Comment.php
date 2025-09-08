@@ -23,6 +23,10 @@ class Comment
     #[ORM\Column(type: 'datetime_immutable')]
     private \DateTimeImmutable $createdAt;
 
+    #[ORM\ManyToOne(targetEntity: User::class)]
+    #[ORM\JoinColumn(nullable: false)]
+    private User $user;
+
     public function __construct(Franchise $franchise, string $content)
     {
         $this->franchise = $franchise;
@@ -36,4 +40,6 @@ class Comment
     public function getContent(): string { return $this->content; }
     public function setContent(string $c): void { $this->content = $c; }
     public function getCreatedAt(): \DateTimeImmutable { return $this->createdAt; }
+    public function getUser(): User { return $this->user; }
+    public function setUser(User $u): void { $this->user = $u; }
 }

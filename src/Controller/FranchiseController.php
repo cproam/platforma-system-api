@@ -6,6 +6,8 @@ use App\Entity\Franchise;
 use App\Entity\FranchiseStatus;
 use App\Entity\Link;
 use App\Entity\Comment;
+use App\Entity\User;
+use App\Entity\Role;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -75,6 +77,10 @@ final class FranchiseController
                     'id' => $c->getId(),
                     'content' => $c->getContent(),
                     'createdAt' => $c->getCreatedAt()->format(DATE_ATOM),
+                    'user' => $c->getUser() ? [
+                        'id' => $c->getUser()->getId(),
+                        'email' => $c->getUser()->getEmail(),
+                    ] : null,
                 ], $f->getComments()->toArray()),
             ];
         }, $items);
@@ -129,10 +135,13 @@ final class FranchiseController
         }
 
         if (!empty($data['comments']) && is_array($data['comments'])) {
+            $user = $this->resolveUser($request);
             foreach ($data['comments'] as $com) {
                 $content = trim((string)($com['content'] ?? ''));
                 if ($content === '') { continue; }
-                $franchise->addComment(new Comment($franchise, $content));
+                $comment = new Comment($franchise, $content);
+                if ($user) { $comment->setUser($user); }
+                $franchise->addComment($comment);
             }
         }
         $this->em->persist($franchise);
@@ -162,8 +171,54 @@ final class FranchiseController
                 'id' => $c->getId(),
                 'content' => $c->getContent(),
                 'createdAt' => $c->getCreatedAt()->format(DATE_ATOM),
+                'user' => $c->getUser() ? [
+                    'id' => $c->getUser()->getId(),
+                    'email' => $c->getUser()->getEmail(),
+                ] : null,
             ], $franchise->getComments()->toArray()),
         ], 201);
+    }
+
+    public function view(Request $request, array $params): JsonResponse
+    {
+        $id = (int)($params['id'] ?? 0);
+        if ($id <= 0) {
+            return new JsonResponse(['error' => 'invalid id'], 400);
+        }
+        $franchise = $this->em->find(Franchise::class, $id);
+        if (!$franchise) {
+            return new JsonResponse(['error' => 'not found'], 404);
+        }
+        return new JsonResponse([
+            'id' => $franchise->getId(),
+            'name' => $franchise->getName(),
+            'code' => $franchise->getCode(),
+            'status' => $franchise->getStatus()->value,
+            'email' => $franchise->getEmail(),
+            'webhookUrl' => $franchise->getWebhookUrl(),
+            'telegramId' => $franchise->getTelegramId(),
+            'description' => $franchise->getDescription(),
+            'cost' => $franchise->getCost(),
+            'investment' => $franchise->getInvestment(),
+            'paybackPeriod' => $franchise->getPaybackPeriod(),
+            'monthlyIncome' => $franchise->getMonthlyIncome(),
+            'publishedDurationDays' => $franchise->getPublishedDurationDays(),
+            'createdAt' => $franchise->getCreatedAt()->format(DATE_ATOM),
+            'links' => array_map(static fn(Link $l) => [
+                'id' => $l->getId(),
+                'url' => $l->getUrl(),
+                'label' => $l->getLabel(),
+            ], $franchise->getLinks()->toArray()),
+            'comments' => array_map(static fn(Comment $c) => [
+                'id' => $c->getId(),
+                'content' => $c->getContent(),
+                'createdAt' => $c->getCreatedAt()->format(DATE_ATOM),
+                'user' => $c->getUser() ? [
+                    'id' => $c->getUser()->getId(),
+                    'email' => $c->getUser()->getEmail(),
+                ] : null,
+            ], $franchise->getComments()->toArray()),
+        ]);
     }
 
     public function addComment(Request $request, array $params): JsonResponse
@@ -181,7 +236,9 @@ final class FranchiseController
         if ($content === '') {
             return new JsonResponse(['error' => 'content is required'], 400);
         }
-        $comment = new Comment($franchise, $content);
+    $user = $this->resolveUser($request);
+    $comment = new Comment($franchise, $content);
+    if ($user) { $comment->setUser($user); }
         $franchise->addComment($comment);
         $this->em->persist($comment);
         $this->em->flush();
@@ -190,6 +247,10 @@ final class FranchiseController
             'franchiseId' => $franchise->getId(),
             'content' => $comment->getContent(),
             'createdAt' => $comment->getCreatedAt()->format(DATE_ATOM),
+            'user' => $comment->getUser() ? [
+                'id' => $comment->getUser()->getId(),
+                'email' => $comment->getUser()->getEmail(),
+            ] : null,
         ], 201);
     }
 
@@ -219,5 +280,31 @@ final class FranchiseController
             'url' => $link->getUrl(),
             'label' => $link->getLabel(),
         ], 201);
+    }
+
+    private function resolveUser(Request $request): ?User
+    {
+        $claims = (array) $request->attributes->get('auth', []);
+        $uid = isset($claims['sub']) ? (int)$claims['sub'] : 0;
+        if ($uid > 0) {
+            $u = $this->em->find(User::class, $uid);
+            if ($u) { return $u; }
+        }
+        // Fallback for direct controller calls (e.g., smoke scripts): a stable anon user
+        $role = $this->em->getRepository(Role::class)->findOneBy(['name' => 'anon']);
+        if (!$role) {
+            $role = new Role('anon');
+            $this->em->persist($role);
+            $this->em->flush();
+        }
+        $email = 'anon-controller@local';
+        $repo = $this->em->getRepository(User::class);
+        $user = $repo->findOneBy(['email' => $email]);
+        if (!$user) {
+            $user = new User($email, '', $role);
+            $this->em->persist($user);
+            $this->em->flush();
+        }
+        return $user;
     }
 }
