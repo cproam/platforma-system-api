@@ -22,6 +22,24 @@ final class Kernel
 
     public function handle(Request $request): Response
     {
+        // Handle CORS preflight early
+        if (strtoupper($request->getMethod()) === 'OPTIONS') {
+            $resp = new Response('', 204);
+            $resp = $this->applyCors($resp, $request, true);
+            // log success for preflight
+            try {
+                /** @var EntityManagerInterface $em */
+                $em = $this->container?->get(EntityManagerInterface::class);
+                if ($em) {
+                    $ip = $request->getClientIp() ?: ($request->server->get('REMOTE_ADDR') ?? null);
+                    $log = new LogEntry('OPTIONS', $request->getPathInfo(), 204, null, null, $ip);
+                    $em->persist($log);
+                    $em->flush();
+                }
+            } catch (\Throwable) {}
+            return $resp;
+        }
+
         $context = (new RequestContext())->fromRequest($request);
         $matcher = new UrlMatcher($this->routes, $context);
 
@@ -85,6 +103,8 @@ final class Kernel
                 if (class_exists($class) && method_exists($class, $method)) {
                     $instance = $this->container?->get($class) ?? new $class();
                     $response = $instance->$method($request, $parameters);
+                    // Apply CORS headers
+                    $response = $this->applyCors($response, $request);
                     // Log success
                     try {
                         /** @var EntityManagerInterface $em */
@@ -124,7 +144,7 @@ final class Kernel
         } catch (\Throwable) {
             // ignore logging failures
         }
-        $payload = [
+    $payload = [
             'error' => [
                 'code' => $status,
                 'message' => $message ?? '',
@@ -133,7 +153,8 @@ final class Kernel
             'method' => $request->getMethod(),
             'requestId' => bin2hex(random_bytes(8)),
         ];
-        return new JsonResponse($payload, $status);
+    $resp = new JsonResponse($payload, $status);
+    return $this->applyCors($resp, $request);
     }
 
     private function getOrCreateAnonUserId(EntityManagerInterface $em, ?string $ip): int
@@ -155,5 +176,21 @@ final class Kernel
             $em->flush();
         }
         return $user->getId() ?? 0;
+    }
+
+    private function applyCors(Response $response, Request $request, bool $isPreflight = false): Response
+    {
+        $origin = (string) $request->headers->get('Origin', '');
+        $allowedOrigin = 'http://localhost:5174';
+        if ($origin === $allowedOrigin) {
+            $response->headers->set('Access-Control-Allow-Origin', $origin);
+            $response->headers->set('Vary', 'Origin');
+        }
+        $response->headers->set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+        $response->headers->set('Access-Control-Allow-Headers', 'Authorization, Content-Type');
+        if ($isPreflight) {
+            $response->headers->set('Access-Control-Max-Age', '600');
+        }
+        return $response;
     }
 }
