@@ -282,6 +282,74 @@ final class FranchiseController
         ], 201);
     }
 
+    public function update(Request $request, array $params): JsonResponse
+    {
+        $id = (int)($params['id'] ?? 0);
+        if ($id <= 0) {
+            return new JsonResponse(['error' => 'invalid id'], 400);
+        }
+        $franchise = $this->em->find(Franchise::class, $id);
+        if (!$franchise) {
+            return new JsonResponse(['error' => 'not found'], 404);
+        }
+
+        $data = json_decode($request->getContent() ?: '[]', true) ?: [];
+        if (isset($data['name'])) { $franchise->setName((string)$data['name']); }
+        if (isset($data['code'])) { $franchise->setCode((string)$data['code']); }
+        if (isset($data['status'])) {
+            $s = (string)$data['status'];
+            $status = match ($s) {
+                FranchiseStatus::PUBLISHED->value => FranchiseStatus::PUBLISHED,
+                FranchiseStatus::TESTING->value => FranchiseStatus::TESTING,
+                FranchiseStatus::UNPUBLISHED->value => FranchiseStatus::UNPUBLISHED,
+                default => null,
+            };
+            if ($status === null) { return new JsonResponse(['error' => 'invalid status'], 400); }
+            $franchise->setStatus($status);
+        }
+        if (array_key_exists('email', $data)) { $franchise->setEmail($data['email'] !== null ? (string)$data['email'] : null); }
+        if (array_key_exists('webhookUrl', $data)) { $franchise->setWebhookUrl($data['webhookUrl'] !== null ? (string)$data['webhookUrl'] : null); }
+        if (array_key_exists('telegramId', $data)) { $franchise->setTelegramId($data['telegramId'] !== null ? (string)$data['telegramId'] : null); }
+        if (array_key_exists('description', $data)) { $franchise->setDescription($data['description'] !== null ? (string)$data['description'] : null); }
+        if (array_key_exists('cost', $data)) { $franchise->setCost($data['cost'] !== null ? (float)$data['cost'] : null); }
+        if (array_key_exists('investment', $data)) { $franchise->setInvestment($data['investment'] !== null ? (float)$data['investment'] : null); }
+        if (array_key_exists('paybackPeriod', $data)) { $franchise->setPaybackPeriod($data['paybackPeriod'] !== null ? (float)$data['paybackPeriod'] : null); }
+        if (array_key_exists('monthlyIncome', $data)) { $franchise->setMonthlyIncome($data['monthlyIncome'] !== null ? (float)$data['monthlyIncome'] : null); }
+
+        $this->em->flush();
+
+        return new JsonResponse([
+            'id' => $franchise->getId(),
+            'name' => $franchise->getName(),
+            'code' => $franchise->getCode(),
+            'status' => $franchise->getStatus()->value,
+            'email' => $franchise->getEmail(),
+            'webhookUrl' => $franchise->getWebhookUrl(),
+            'telegramId' => $franchise->getTelegramId(),
+            'description' => $franchise->getDescription(),
+            'cost' => $franchise->getCost(),
+            'investment' => $franchise->getInvestment(),
+            'paybackPeriod' => $franchise->getPaybackPeriod(),
+            'monthlyIncome' => $franchise->getMonthlyIncome(),
+            'publishedDurationDays' => $franchise->getPublishedDurationDays(),
+            'createdAt' => $franchise->getCreatedAt()->format(DATE_ATOM),
+            'links' => array_map(static fn(Link $l) => [
+                'id' => $l->getId(),
+                'url' => $l->getUrl(),
+                'label' => $l->getLabel(),
+            ], $franchise->getLinks()->toArray()),
+            'comments' => array_map(static fn(Comment $c) => [
+                'id' => $c->getId(),
+                'content' => $c->getContent(),
+                'createdAt' => $c->getCreatedAt()->format(DATE_ATOM),
+                'user' => $c->getUser() ? [
+                    'id' => $c->getUser()->getId(),
+                    'email' => $c->getUser()->getEmail(),
+                ] : null,
+            ], $franchise->getComments()->toArray()),
+        ]);
+    }
+
     private function resolveUser(Request $request): ?User
     {
         $claims = (array) $request->attributes->get('auth', []);

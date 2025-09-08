@@ -12,6 +12,7 @@ use App\Entity\LogEntry;
 use App\Entity\Comment;
 use App\Entity\Link;
 use App\Entity\FranchiseStatus;
+use App\Entity\Task;
 use App\Infrastructure\Config\Config;
 
 $databasePath = Config::dbPath();
@@ -28,6 +29,7 @@ $classes = [
     $em->getClassMetadata(LogEntry::class),
     $em->getClassMetadata(Comment::class),
     $em->getClassMetadata(Link::class),
+    $em->getClassMetadata(Task::class),
 ];
 $schemaTool->dropSchema($classes);
 $schemaTool->createSchema($classes);

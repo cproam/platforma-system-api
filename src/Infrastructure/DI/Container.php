@@ -12,6 +12,8 @@ use App\Controller\AuthController;
 use App\Infrastructure\Security\JwtService;
 use App\Controller\AdminLogController;
 use App\Controller\AdminBanController;
+use App\Controller\TaskController;
+use App\Controller\UserController;
 
 final class Container
 {
@@ -30,6 +32,8 @@ final class Container
             NoteController::class => new NoteController($this->get(EntityManagerInterface::class)),
             FranchiseController::class => new FranchiseController($this->get(EntityManagerInterface::class)),
             PackageController::class => new PackageController($this->get(EntityManagerInterface::class)),
+            TaskController::class => new TaskController($this->get(EntityManagerInterface::class)),
+            UserController::class => new UserController($this->get(EntityManagerInterface::class)),
             JwtService::class => new JwtService(),
             AuthController::class => new AuthController(
                 $this->get(EntityManagerInterface::class),

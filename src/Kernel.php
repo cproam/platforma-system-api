@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App;
 
@@ -36,7 +38,8 @@ final class Kernel
                     $em->persist($log);
                     $em->flush();
                 }
-            } catch (\Throwable) {}
+            } catch (\Throwable) {
+            }
             return $resp;
         }
 
@@ -46,10 +49,6 @@ final class Kernel
         try {
             $parameters = $matcher->match($request->getPathInfo());
             $controller = $parameters['_controller'] ?? null;
-            $requiredMethod = ($parameters['_method'] ?? null) ? strtoupper((string)$parameters['_method']) : null;
-            if ($requiredMethod && $request->getMethod() !== $requiredMethod) {
-                return $this->logAndRespond($request, 405, 'Method Not Allowed');
-            }
 
             // Authentication: allow /auth/login without token, require JWT otherwise
             $path = $request->getPathInfo();
@@ -105,7 +104,8 @@ final class Kernel
                             $em->persist($log);
                             $em->flush();
                         }
-                    } catch (\Throwable) {}
+                    } catch (\Throwable) {
+                    }
                     return $response;
                 }
             }
@@ -134,7 +134,7 @@ final class Kernel
         } catch (\Throwable) {
             // ignore logging failures
         }
-    $payload = [
+        $payload = [
             'error' => [
                 'code' => $status,
                 'message' => $message ?? '',
@@ -143,8 +143,8 @@ final class Kernel
             'method' => $request->getMethod(),
             'requestId' => bin2hex(random_bytes(8)),
         ];
-    $resp = new JsonResponse($payload, $status);
-    return $this->applyCors($resp, $request);
+        $resp = new JsonResponse($payload, $status);
+        return $this->applyCors($resp, $request);
     }
 
     private function getOrCreateAnonUserId(EntityManagerInterface $em, ?string $ip): int
@@ -170,14 +170,14 @@ final class Kernel
 
     private function applyCors(Response $response, Request $request, bool $isPreflight = false): Response
     {
-    $origin = (string) $request->headers->get('Origin', '');
-    $allowedOrigins = \App\Infrastructure\Config\Config::corsAllowedOrigins();
-    if ($origin !== '' && in_array($origin, $allowedOrigins, true)) {
+        $origin = (string) $request->headers->get('Origin', '');
+        $allowedOrigins = \App\Infrastructure\Config\Config::corsAllowedOrigins();
+        if ($origin !== '' && in_array($origin, $allowedOrigins, true)) {
             $response->headers->set('Access-Control-Allow-Origin', $origin);
             $response->headers->set('Vary', 'Origin');
         }
-        $response->headers->set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-        $response->headers->set('Access-Control-Allow-Headers', 'Authorization, Content-Type');
+        $response->headers->set('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
+        $response->headers->set('Access-Control-Allow-Headers', 'Authorization, Content-Type, X-Requested-With');
         if ($isPreflight) {
             $response->headers->set('Access-Control-Max-Age', '600');
         }

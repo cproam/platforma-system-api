@@ -9,6 +9,8 @@ use App\Controller\PackageController;
 use App\Controller\AuthController;
 use App\Controller\AdminLogController;
 use App\Controller\AdminBanController;
+use App\Controller\TaskController;
+use App\Controller\UserController;
 
 $routes = new RouteCollection();
 
@@ -22,62 +24,70 @@ $routes->add('hello', new Route('/hello', [
 
 $routes->add('notes_list', new Route('/notes', [
     '_controller' => NoteController::class . '::list',
-    '_method' => 'GET',
-]));
+], [], [], '', [], ['GET']));
 
 $routes->add('notes_create', new Route('/notes/create', [
     '_controller' => NoteController::class . '::create',
-    '_method' => 'POST',
-]));
+], [], [], '', [], ['POST']));
 
 $routes->add('franchise_list', new Route('/franchises', [
     '_controller' => FranchiseController::class . '::list',
-    '_method' => 'GET',
-]));
+], [], [], '', [], ['GET']));
 
 $routes->add('franchise_create', new Route('/franchises/create', [
     '_controller' => FranchiseController::class . '::create',
-    '_method' => 'POST',
-]));
+], [], [], '', [], ['POST']));
 
-$routes->add('franchise_view', new Route('/franchise/{id}', [
+$routes->add('franchise_update', new Route('/franchises/{id}', [
+    '_controller' => FranchiseController::class . '::update',
+], [], [], '', [], ['PUT']));
+
+$routes->add('franchise_view', new Route('/franchises/{id}', [
     '_controller' => FranchiseController::class . '::view',
-    '_method' => 'GET',
-]));
+], [], [], '', [], ['GET']));
 
 $routes->add('franchise_add_comment', new Route('/franchises/{id}/comments', [
     '_controller' => FranchiseController::class . '::addComment',
-    '_method' => 'POST',
-]));
+], [], [], '', [], ['POST']));
 
 $routes->add('franchise_add_link', new Route('/franchises/{id}/links', [
     '_controller' => FranchiseController::class . '::addLink',
-    '_method' => 'POST',
-]));
+], [], [], '', [], ['POST']));
 
 $routes->add('packages_list', new Route('/packages', [
     '_controller' => PackageController::class . '::list',
-    '_method' => 'GET',
-]));
+], [], [], '', [], ['GET']));
 
 $routes->add('packages_create', new Route('/packages/create', [
     '_controller' => PackageController::class . '::create',
-    '_method' => 'POST',
-]));
+], [], [], '', [], ['POST']));
 
 $routes->add('auth_login', new Route('/auth/login', [
     '_controller' => AuthController::class . '::login',
-    '_method' => 'POST',
-]));
+], [], [], '', [], ['POST']));
 
 $routes->add('admin_logs', new Route('/admin/logs', [
     '_controller' => AdminLogController::class . '::list',
-    '_method' => 'GET',
-]));
+], [], [], '', [], ['GET']));
 
 $routes->add('admin_ban_ip', new Route('/admin/ban-ip', [
     '_controller' => AdminBanController::class . '::ban',
-    '_method' => 'POST',
-]));
+], [], [], '', [], ['POST']));
+
+$routes->add('tasks_create', new Route('/tasks', [
+    '_controller' => TaskController::class . '::create',
+], [], [], '', [], ['POST']));
+
+$routes->add('tasks_my', new Route('/tasks/my', [
+    '_controller' => TaskController::class . '::myTasks',
+], [], [], '', [], ['GET']));
+
+$routes->add('tasks_unread', new Route('/tasks/unread', [
+    '_controller' => TaskController::class . '::unread',
+], [], [], '', [], ['GET']));
+
+$routes->add('users_list', new Route('/users', [
+    '_controller' => UserController::class . '::list',
+], [], [], '', [], ['GET']));
 
 return $routes;

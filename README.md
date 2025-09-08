@@ -7,9 +7,9 @@ A lightweight PHP API using Symfony components and Doctrine ORM with SQLite. Inc
 - Routing: Symfony Routing (front controller in `public/index.php`)
 - HTTP: Symfony HttpFoundation
 - ORM: Doctrine ORM 3 (attribute mappings) + SQLite (file DB)
-- Auth: JWT for all routes except `/auth/login`; anonymous fallback by IP
+- Auth: JWT for all routes except `/auth/login`
 - Logging: All requests logged (success and error); admin endpoint to view logs
-- Domain: Notes, Packages, Franchises with statuses, comments, links
+- Domain: Notes, Packages, Franchises with statuses, comments, links, and Tasks
 
 ## Quick start
 
@@ -36,11 +36,13 @@ php -S 127.0.0.1:8000 -t public
 
 ## Configuration
 
-- DB location: `var/data.sqlite` (configured via `config/parameters.php`)
+- DB location: `var/data.sqlite`
 - JWT settings (override via `.env`):
   - `JWT_SECRET`
   - `JWT_TTL` (seconds)
   - `JWT_ALG` (e.g., HS256)
+- CORS (override via `.env`):
+  - `CORS_ALLOWED_ORIGINS` (comma-separated list, e.g. `http://localhost:5173,https://system.platforma360.ru`)
 
 See `.env.example` for reference.
 
@@ -51,9 +53,7 @@ See `.env.example` for reference.
   - returns: `{ token, user: { id, email, role } }`
 - All other endpoints require a Bearer token (except anonymous fallback described below).
 
-### Anonymous access
-
-If no Authorization header is provided, the Kernel assigns an `anon` role by IP address (and denies if that anon user is banned). Successful and failed requests are logged with user/ip.
+All other endpoints require a Bearer token in the `Authorization` header.
 
 ## Error model
 
@@ -152,6 +152,29 @@ Endpoints:
   - body: `{ url: string, label?: string }`
   - returns: `{ id, franchiseId, url, label }`
 
+### Tasks
+
+- POST `/tasks` → Create a task
+  - body:
+    ```json
+    {
+      "assignedToId": 2,
+      "description": "Call the client and confirm details",
+      "deadline": "2025-12-31T17:00:00+03:00",
+      "franchiseId": 3
+    }
+    ```
+  - returns: `{ id, description, deadline, createdAt, createdBy: { id, email }, assignedTo: { id, email }, franchise?: { id, name, code } }`
+
+- GET `/tasks/my` → List tasks assigned to the current user
+  - returns: `[{ ...task }, ...]` sorted by `deadline` asc, then `id` desc
+
+### Users
+
+- GET `/users` → List users to assign tasks
+  - query: `q` (search by email, optional), `limit` (1–200, default 100), `offset` (default 0)
+  - returns: `{ items: [{ id, email }], limit, offset }`
+
 ## Request logging
 
 Every handled request is logged with method, path, status, optional message, userId (if known), and IP. Logs are visible to admins via `/admin/logs`.
@@ -160,7 +183,7 @@ Every handled request is logged with method, path, status, optional message, use
 
 - Built-in server at `http://127.0.0.1:8000`
 - The front controller (`public/index.php`) boots routes and the Kernel with DI container.
-- Method enforcement is configured per-route via the `_method` default and enforced in Kernel.
+Routes are defined with explicit HTTP methods (GET/POST/PUT/DELETE). If you get a 405, double-check you're using the allowed method.
 
 ## Frontend integration tips
 
@@ -180,7 +203,8 @@ Every handled request is logged with method, path, status, optional message, use
 
 ## Troubleshooting
 
-- If you see a 405, the route enforces a different method (`_method`) than the one used.
+- If you see a 405, the HTTP method isn't allowed for that path (e.g., using POST where only GET is allowed).
 - If DB errors occur, recreate the schema: `php .\bin\init-db.php`.
 - Ensure `.env` overrides are correct for JWT if tokens fail to verify.
 - Admin-only endpoints require a token for a user with role `admin`.
+- If CORS preflight fails, ensure your frontend origin is listed in `CORS_ALLOWED_ORIGINS` and that you're using allowed methods/headers.
