@@ -101,6 +101,21 @@ final class TaskController
         return new JsonResponse($this->serialize($task));
     }
 
+    public function view(Request $request, array $params): JsonResponse
+    {
+        $claims = (array) $request->attributes->get('auth', []);
+        $uid = isset($claims['sub']) ? (int)$claims['sub'] : 0;
+        if ($uid <= 0) { return new JsonResponse(['error' => 'unauthorized'], 401); }
+
+        $id = isset($params['id']) ? (int)$params['id'] : 0;
+        if ($id <= 0) { return new JsonResponse(['error' => 'invalid id'], 400); }
+
+        $task = $this->em->find(Task::class, $id);
+        if (!$task) { return new JsonResponse(['error' => 'not found'], 404); }
+
+        return new JsonResponse($this->serialize($task));
+    }
+
     public function myTasks(Request $request, array $params): JsonResponse
     {
         $claims = (array) $request->attributes->get('auth', []);
@@ -133,7 +148,7 @@ final class TaskController
             $qb = $this->em->createQueryBuilder();
             $qb->select('t')
                 ->from(Task::class, 't')
-                ->where('t.assignedTo = :uid')
+                ->where('IDENTITY(t.assignedTo) = :uid')
                 ->andWhere('t.seen = false')
                 ->setParameter('uid', $uid)
                 ->orderBy('t.id', 'ASC')

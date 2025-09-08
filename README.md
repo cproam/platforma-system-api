@@ -179,6 +179,24 @@ Endpoints:
   - query: `q` (search by email, optional), `limit` (1–200, default 100), `offset` (default 0)
   - returns: `{ items: [{ id, email }], limit, offset }`
 
+- POST `/users` (admin) → Create user
+  - body: `{ email: string, password: string, role?: "user"|"admin" }`
+  - returns: `{ id, email, role }`
+
+- PUT `/users/{id}` (admin) → Update user
+  - body: may include any of `email`, `password`, `role`
+  - returns: `{ id, email, role }`
+
+### Roles
+
+- GET `/roles` → List roles
+  - query: `q` (search by name, optional), `limit` (1–200, default 100), `offset` (default 0)
+  - returns: `{ items: [{ id, name }], limit, offset }`
+
+- POST `/roles` (admin) → Create role
+  - body: `{ name: string }`
+  - returns: `{ id, name }`
+
 ## Request logging
 
 Every handled request is logged with method, path, status, optional message, userId (if known), and IP. Logs are visible to admins via `/admin/logs`.

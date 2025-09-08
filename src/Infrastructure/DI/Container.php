@@ -14,6 +14,7 @@ use App\Controller\AdminLogController;
 use App\Controller\AdminBanController;
 use App\Controller\TaskController;
 use App\Controller\UserController;
+use App\Controller\RoleController;
 
 final class Container
 {
@@ -34,6 +35,7 @@ final class Container
             PackageController::class => new PackageController($this->get(EntityManagerInterface::class)),
             TaskController::class => new TaskController($this->get(EntityManagerInterface::class)),
             UserController::class => new UserController($this->get(EntityManagerInterface::class)),
+            RoleController::class => new RoleController($this->get(EntityManagerInterface::class)),
             JwtService::class => new JwtService(),
             AuthController::class => new AuthController(
                 $this->get(EntityManagerInterface::class),

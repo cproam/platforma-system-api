@@ -11,6 +11,7 @@ use App\Controller\AdminLogController;
 use App\Controller\AdminBanController;
 use App\Controller\TaskController;
 use App\Controller\UserController;
+use App\Controller\RoleController;
 
 $routes = new RouteCollection();
 
@@ -82,6 +83,10 @@ $routes->add('tasks_update', new Route('/tasks/{id}', [
     '_controller' => TaskController::class . '::update',
 ], [], [], '', [], ['PUT']));
 
+$routes->add('tasks_view', new Route('/tasks/{id}', [
+    '_controller' => TaskController::class . '::view',
+], [], [], '', [], ['GET']));
+
 $routes->add('tasks_my', new Route('/tasks/my', [
     '_controller' => TaskController::class . '::myTasks',
 ], [], [], '', [], ['GET']));
@@ -93,5 +98,21 @@ $routes->add('tasks_unread', new Route('/tasks/unread', [
 $routes->add('users_list', new Route('/users', [
     '_controller' => UserController::class . '::list',
 ], [], [], '', [], ['GET']));
+
+$routes->add('users_create', new Route('/users', [
+    '_controller' => UserController::class . '::create',
+], [], [], '', [], ['POST']));
+
+$routes->add('users_update', new Route('/users/{id}', [
+    '_controller' => UserController::class . '::update',
+], [], [], '', [], ['PUT']));
+
+$routes->add('roles_list', new Route('/roles', [
+    '_controller' => RoleController::class . '::list',
+], [], [], '', [], ['GET']));
+
+$routes->add('roles_create', new Route('/roles', [
+    '_controller' => RoleController::class . '::create',
+], [], [], '', [], ['POST']));
 
 return $routes;
