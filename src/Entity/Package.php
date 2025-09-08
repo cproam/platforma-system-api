@@ -22,6 +22,10 @@ class Package
     #[ORM\Column(type: 'integer')]
     private int $leadCount;
 
+    #[ORM\ManyToOne(targetEntity: Franchise::class)]
+    #[ORM\JoinColumn(name: 'franchise_id', referencedColumnName: 'id', nullable: true, onDelete: 'SET NULL')]
+    private ?Franchise $franchise = null;
+
     public function __construct(string $name, PackageType $type, int $leadCount)
     {
         $this->name = $name;
@@ -36,4 +40,7 @@ class Package
     public function setType(PackageType $type): void { $this->type = $type; }
     public function getLeadCount(): int { return $this->leadCount; }
     public function setLeadCount(int $leadCount): void { $this->leadCount = $leadCount; }
+
+    public function getFranchise(): ?Franchise { return $this->franchise; }
+    public function setFranchise(?Franchise $franchise): void { $this->franchise = $franchise; }
 }
