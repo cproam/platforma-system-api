@@ -180,9 +180,9 @@ final class Kernel
 
     private function applyCors(Response $response, Request $request, bool $isPreflight = false): Response
     {
-        $origin = (string) $request->headers->get('Origin', '');
-        $allowedOrigin = 'http://localhost:5174';
-        if ($origin === $allowedOrigin) {
+    $origin = (string) $request->headers->get('Origin', '');
+    $allowedOrigins = \App\Infrastructure\Config\Config::corsAllowedOrigins();
+    if ($origin !== '' && in_array($origin, $allowedOrigins, true)) {
             $response->headers->set('Access-Control-Allow-Origin', $origin);
             $response->headers->set('Vary', 'Origin');
         }

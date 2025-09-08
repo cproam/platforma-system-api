@@ -49,6 +49,18 @@ final class Config
         return self::env('JWT_ALG') ?? (string) self::get('jwt.alg', 'HS256');
     }
 
+    /**
+     * Allowed CORS origins as an array, parsed from CORS_ALLOWED_ORIGINS env (comma-separated).
+     */
+    public static function corsAllowedOrigins(): array
+    {
+        $raw = self::env('CORS_ALLOWED_ORIGINS') ?? '';
+        if ($raw === '') { return []; }
+        $parts = array_map('trim', explode(',', $raw));
+        $parts = array_values(array_filter($parts, fn($v) => $v !== ''));
+        return $parts;
+    }
+
     private static function load(): array
     {
         if (self::$cache !== null) {
