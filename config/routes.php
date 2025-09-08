@@ -78,6 +78,10 @@ $routes->add('tasks_create', new Route('/tasks', [
     '_controller' => TaskController::class . '::create',
 ], [], [], '', [], ['POST']));
 
+$routes->add('tasks_update', new Route('/tasks/{id}', [
+    '_controller' => TaskController::class . '::update',
+], [], [], '', [], ['PUT']));
+
 $routes->add('tasks_my', new Route('/tasks/my', [
     '_controller' => TaskController::class . '::myTasks',
 ], [], [], '', [], ['GET']));

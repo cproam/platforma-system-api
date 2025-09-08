@@ -34,6 +34,9 @@ class Task
     #[ORM\Column(type: 'datetime_immutable')]
     private \DateTimeImmutable $createdAt;
 
+    #[ORM\Column(type: 'boolean')]
+    private bool $seen = false;
+
     public function __construct(User $createdBy, User $assignedTo, string $description, \DateTimeImmutable $deadline, ?Franchise $franchise = null)
     {
         $this->createdBy = $createdBy;
@@ -55,4 +58,6 @@ class Task
     public function getDeadline(): \DateTimeImmutable { return $this->deadline; }
     public function setDeadline(\DateTimeImmutable $d): void { $this->deadline = $d; }
     public function getCreatedAt(): \DateTimeImmutable { return $this->createdAt; }
+    public function isSeen(): bool { return $this->seen; }
+    public function setSeen(bool $seen): void { $this->seen = $seen; }
 }

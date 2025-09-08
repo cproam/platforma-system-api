@@ -169,6 +169,10 @@ Endpoints:
 - GET `/tasks/my` → List tasks assigned to the current user
   - returns: `[{ ...task }, ...]` sorted by `deadline` asc, then `id` desc
 
+- PUT `/tasks/{id}` → Update a task (partial)
+  - body: may include any of `description`, `deadline`, `assignedToId`, `franchiseId`, `seen`
+  - returns: the updated task
+
 ### Users
 
 - GET `/users` → List users to assign tasks
