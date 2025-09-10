@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Controller;
 
@@ -21,7 +23,9 @@ final class TaskController
             return new JsonResponse(['error' => 'unauthorized'], 401);
         }
         $creator = $this->em->find(User::class, $creatorId);
-        if (!$creator) { return new JsonResponse(['error' => 'unauthorized'], 401); }
+        if (!$creator) {
+            return new JsonResponse(['error' => 'unauthorized'], 401);
+        }
 
         $data = json_decode($request->getContent() ?: '[]', true) ?: [];
         $assignedToId = (int)($data['assignedToId'] ?? 0);
@@ -39,12 +43,16 @@ final class TaskController
         }
 
         $assignee = $this->em->find(User::class, $assignedToId);
-        if (!$assignee) { return new JsonResponse(['error' => 'assignee not found'], 400); }
+        if (!$assignee) {
+            return new JsonResponse(['error' => 'assignee not found'], 400);
+        }
 
         $franchise = null;
         if ($franchiseId) {
             $franchise = $this->em->find(Franchise::class, $franchiseId);
-            if (!$franchise) { return new JsonResponse(['error' => 'franchise not found'], 400); }
+            if (!$franchise) {
+                return new JsonResponse(['error' => 'franchise not found'], 400);
+            }
         }
 
         $task = new Task($creator, $assignee, $description, $deadline, $franchise);
@@ -58,30 +66,45 @@ final class TaskController
     {
         $claims = (array) $request->attributes->get('auth', []);
         $uid = isset($claims['sub']) ? (int)$claims['sub'] : 0;
-        if ($uid <= 0) { return new JsonResponse(['error' => 'unauthorized'], 401); }
+        if ($uid <= 0) {
+            return new JsonResponse(['error' => 'unauthorized'], 401);
+        }
 
         $id = isset($params['id']) ? (int)$params['id'] : 0;
-        if ($id <= 0) { return new JsonResponse(['error' => 'invalid id'], 400); }
+        if ($id <= 0) {
+            return new JsonResponse(['error' => 'invalid id'], 400);
+        }
 
         $task = $this->em->find(Task::class, $id);
-        if (!$task) { return new JsonResponse(['error' => 'not found'], 404); }
+        if (!$task) {
+            return new JsonResponse(['error' => 'not found'], 404);
+        }
 
         $data = json_decode($request->getContent() ?: '[]', true) ?: [];
 
         if (array_key_exists('description', $data)) {
             $desc = trim((string)$data['description']);
-            if ($desc === '') { return new JsonResponse(['error' => 'description cannot be empty'], 400); }
+            if ($desc === '') {
+                return new JsonResponse(['error' => 'description cannot be empty'], 400);
+            }
             $task->setDescription($desc);
         }
         if (array_key_exists('deadline', $data)) {
-            try { $task->setDeadline(new \DateTimeImmutable((string)$data['deadline'])); }
-            catch (\Throwable) { return new JsonResponse(['error' => 'invalid deadline'], 400); }
+            try {
+                $task->setDeadline(new \DateTimeImmutable((string)$data['deadline']));
+            } catch (\Throwable) {
+                return new JsonResponse(['error' => 'invalid deadline'], 400);
+            }
         }
         if (array_key_exists('assignedToId', $data)) {
             $aid = (int)$data['assignedToId'];
-            if ($aid <= 0) { return new JsonResponse(['error' => 'invalid assignedToId'], 400); }
+            if ($aid <= 0) {
+                return new JsonResponse(['error' => 'invalid assignedToId'], 400);
+            }
             $assignee = $this->em->find(User::class, $aid);
-            if (!$assignee) { return new JsonResponse(['error' => 'assignee not found'], 400); }
+            if (!$assignee) {
+                return new JsonResponse(['error' => 'assignee not found'], 400);
+            }
             $task->setAssignedTo($assignee);
         }
         if (array_key_exists('franchiseId', $data)) {
@@ -89,7 +112,9 @@ final class TaskController
             $fr = null;
             if ($fid) {
                 $fr = $this->em->find(Franchise::class, $fid);
-                if (!$fr) { return new JsonResponse(['error' => 'franchise not found'], 400); }
+                if (!$fr) {
+                    return new JsonResponse(['error' => 'franchise not found'], 400);
+                }
             }
             $task->setFranchise($fr);
         }
@@ -105,13 +130,19 @@ final class TaskController
     {
         $claims = (array) $request->attributes->get('auth', []);
         $uid = isset($claims['sub']) ? (int)$claims['sub'] : 0;
-        if ($uid <= 0) { return new JsonResponse(['error' => 'unauthorized'], 401); }
+        if ($uid <= 0) {
+            return new JsonResponse(['error' => 'unauthorized'], 401);
+        }
 
         $id = isset($params['id']) ? (int)$params['id'] : 0;
-        if ($id <= 0) { return new JsonResponse(['error' => 'invalid id'], 400); }
+        if ($id <= 0) {
+            return new JsonResponse(['error' => 'invalid id'], 400);
+        }
 
         $task = $this->em->find(Task::class, $id);
-        if (!$task) { return new JsonResponse(['error' => 'not found'], 404); }
+        if (!$task) {
+            return new JsonResponse(['error' => 'not found'], 404);
+        }
 
         return new JsonResponse($this->serialize($task));
     }
@@ -120,26 +151,38 @@ final class TaskController
     {
         $claims = (array) $request->attributes->get('auth', []);
         $uid = isset($claims['sub']) ? (int)$claims['sub'] : 0;
-        if ($uid <= 0) { return new JsonResponse(['error' => 'unauthorized'], 401); }
+        if ($uid <= 0) {
+            return new JsonResponse(['error' => 'unauthorized'], 401);
+        }
 
         $repo = $this->em->getRepository(Task::class);
         $tasks = $repo->findBy(['assignedTo' => $uid], ['deadline' => 'ASC', 'id' => 'DESC']);
-    return new JsonResponse(array_map([$this, 'serialize'], $tasks));
+        return new JsonResponse(array_map([$this, 'serialize'], $tasks));
     }
 
     public function unread(Request $request, array $params): JsonResponse
     {
         $claims = (array) $request->attributes->get('auth', []);
         $uid = isset($claims['sub']) ? (int)$claims['sub'] : 0;
-        if ($uid <= 0) { return new JsonResponse(['error' => 'unauthorized'], 401); }
+        if ($uid <= 0) {
+            return new JsonResponse(['error' => 'unauthorized'], 401);
+        }
 
         $sinceId = (int)($request->query->get('sinceId', 0));
         $timeout = (int)($request->query->get('timeout', 25));
         $limit = (int)($request->query->get('limit', 50));
-        if ($timeout < 1) { $timeout = 1; }
-        if ($timeout > 60) { $timeout = 60; }
-        if ($limit < 1) { $limit = 1; }
-        if ($limit > 100) { $limit = 100; }
+        if ($timeout < 1) {
+            $timeout = 1;
+        }
+        if ($timeout > 60) {
+            $timeout = 60;
+        }
+        if ($limit < 1) {
+            $limit = 1;
+        }
+        if ($limit > 100) {
+            $limit = 100;
+        }
 
         $deadlineTs = microtime(true) + $timeout;
         $pollIntervalUs = 500000; // 0.5s
@@ -162,7 +205,9 @@ final class TaskController
                 $nextSinceId = $sinceId;
                 foreach ($tasks as $task) {
                     $id = $task->getId() ?? 0;
-                    if ($id > $nextSinceId) { $nextSinceId = $id; }
+                    if ($id > $nextSinceId) {
+                        $nextSinceId = $id;
+                    }
                 }
                 return new JsonResponse([
                     'items' => array_map([$this, 'serialize'], $tasks),

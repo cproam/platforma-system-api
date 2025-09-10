@@ -79,14 +79,6 @@ $routes->add('tasks_create', new Route('/tasks', [
     '_controller' => TaskController::class . '::create',
 ], [], [], '', [], ['POST']));
 
-$routes->add('tasks_update', new Route('/tasks/{id}', [
-    '_controller' => TaskController::class . '::update',
-], [], [], '', [], ['PUT']));
-
-$routes->add('tasks_view', new Route('/tasks/{id}', [
-    '_controller' => TaskController::class . '::view',
-], [], [], '', [], ['GET']));
-
 $routes->add('tasks_my', new Route('/tasks/my', [
     '_controller' => TaskController::class . '::myTasks',
 ], [], [], '', [], ['GET']));
@@ -94,6 +86,14 @@ $routes->add('tasks_my', new Route('/tasks/my', [
 $routes->add('tasks_unread', new Route('/tasks/unread', [
     '_controller' => TaskController::class . '::unread',
 ], [], [], '', [], ['GET']));
+
+$routes->add('tasks_update', new Route('/tasks/{id}', [
+    '_controller' => TaskController::class . '::update',
+], ['id' => '\\d+'], [], '', [], ['PUT']));
+
+$routes->add('tasks_view', new Route('/tasks/{id}', [
+    '_controller' => TaskController::class . '::view',
+], ['id' => '\\d+'], [], '', [], ['GET']));
 
 $routes->add('users_list', new Route('/users', [
     '_controller' => UserController::class . '::list',

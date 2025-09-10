@@ -24,7 +24,7 @@ final class AdminLogController
 
         $repo = $this->em->getRepository(LogEntry::class);
         $logs = $repo->findBy([], ['id' => 'DESC'], $limit, $offset);
-        $items = array_map(static function (LogEntry $l): array {
+    $items = array_map(static function (LogEntry $l): array {
             return [
                 'id' => $l->getId(),
                 'createdAt' => $l->getCreatedAt()->format(DATE_ATOM),
@@ -32,6 +32,9 @@ final class AdminLogController
                 'path' => $l->getPath(),
                 'status' => $l->getStatus(),
                 'message' => $l->getMessage(),
+        'userId' => $l->getUserId(),
+        'action' => $l->getAction(),
+        'object' => $l->getObject(),
             ];
         }, $logs);
         return new JsonResponse([

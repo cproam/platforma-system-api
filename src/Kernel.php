@@ -25,7 +25,7 @@ final class Kernel
     public function handle(Request $request): Response
     {
         // Handle CORS preflight early
-        if (strtoupper($request->getMethod()) === 'OPTIONS') {
+            if (strtoupper($request->getMethod()) === 'OPTIONS') {
             $resp = new Response('', 204);
             $resp = $this->applyCors($resp, $request, true);
             // log success for preflight
@@ -34,7 +34,7 @@ final class Kernel
                 $em = $this->container?->get(EntityManagerInterface::class);
                 if ($em) {
                     $ip = $request->getClientIp() ?: ($request->server->get('REMOTE_ADDR') ?? null);
-                    $log = new LogEntry('OPTIONS', $request->getPathInfo(), 204, null, null, $ip);
+                    $log = new LogEntry('OPTIONS', $request->getPathInfo(), 204, null, null, $ip, 'preflight', null);
                     $em->persist($log);
                     $em->flush();
                 }
@@ -91,7 +91,7 @@ final class Kernel
                 [$class, $method] = explode('::', $controller, 2);
                 if (class_exists($class) && method_exists($class, $method)) {
                     $instance = $this->container?->get($class) ?? new $class();
-                    $response = $instance->$method($request, $parameters);
+            $response = $instance->$method($request, $parameters);
                     // Apply CORS headers
                     $response = $this->applyCors($response, $request);
                     // Log success
@@ -100,7 +100,8 @@ final class Kernel
                         $em = $this->container?->get(EntityManagerInterface::class);
                         if ($em) {
                             $userIdForLog = $userId;
-                            $log = new LogEntry($request->getMethod(), $request->getPathInfo(), $response->getStatusCode(), null, $userIdForLog, $ip);
+                $actionObj = $this->deriveActionObject($request->getMethod(), $request->getPathInfo());
+                $log = new LogEntry($request->getMethod(), $request->getPathInfo(), $response->getStatusCode(), null, $userIdForLog, $ip, $actionObj['action'], $actionObj['object']);
                             $em->persist($log);
                             $em->flush();
                         }
@@ -127,7 +128,8 @@ final class Kernel
                 $claims = (array) $request->attributes->get('auth', []);
                 $uid = isset($claims['sub']) ? (int)$claims['sub'] : null;
                 $ip = $request->getClientIp() ?: ($request->server->get('REMOTE_ADDR') ?? null);
-                $log = new LogEntry($request->getMethod(), $request->getPathInfo(), $status, $message, $uid, $ip);
+                $actionObj = $this->deriveActionObject($request->getMethod(), $request->getPathInfo());
+                $log = new LogEntry($request->getMethod(), $request->getPathInfo(), $status, $message, $uid, $ip, $actionObj['action'], $actionObj['object']);
                 $em->persist($log);
                 $em->flush();
             }
@@ -145,6 +147,20 @@ final class Kernel
         ];
         $resp = new JsonResponse($payload, $status);
         return $this->applyCors($resp, $request);
+    }
+
+    private function deriveActionObject(string $method, string $path): array
+    {
+        $action = strtolower($method);
+        $object = null;
+        // Basic heuristic: use first path segment as object
+        // e.g., /franchises/123 -> object 'franchises'; /auth/login -> 'auth'
+        $trimmed = trim($path, '/');
+        if ($trimmed !== '') {
+            $parts = explode('/', $trimmed);
+            $object = $parts[0] ?? null;
+        }
+        return ['action' => $action, 'object' => $object];
     }
 
     private function getOrCreateAnonUserId(EntityManagerInterface $em, ?string $ip): int
