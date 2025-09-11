@@ -36,6 +36,8 @@ php -S 127.0.0.1:8000 -t public
 
 ## Configuration
 
+Environment variables from `.env` are loaded automatically using a lightweight dotenv loader.
+
 - DB location: `var/data.sqlite`
 - JWT settings (override via `.env`):
   - `JWT_SECRET`
