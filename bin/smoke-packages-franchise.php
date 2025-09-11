@@ -2,12 +2,12 @@
 
 require_once __DIR__ . '/../vendor/autoload.php';
 
-use App\Infrastructure\DI\Container;
+use App\Infrastructure\DI\ContainerFactory;
 use App\Controller\FranchiseController;
 use App\Controller\PackageController;
 use Symfony\Component\HttpFoundation\Request;
 
-$container = new Container();
+$container = ContainerFactory::create();
 $frController = $container->get(FranchiseController::class);
 $pkgController = $container->get(PackageController::class);
 

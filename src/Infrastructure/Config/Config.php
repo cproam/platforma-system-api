@@ -2,10 +2,13 @@
 
 namespace App\Infrastructure\Config;
 
+use Symfony\Component\Dotenv\Dotenv;
+
 final class Config
 {
     private static ?array $cache = null;
     private static bool $envLoaded = false;
+    private static ?Dotenv $dotenv = null;
 
     public static function get(string $key, mixed $default = null): mixed
     {
@@ -29,8 +32,8 @@ final class Config
     public static function env(string $name, ?string $default = null): ?string
     {
         self::ensureEnvLoaded();
-        $val = getenv($name);
-        return $val === false ? $default : $val;
+        $val = $_ENV[$name] ?? $_SERVER[$name] ?? getenv($name);
+        return $val === false || $val === null ? $default : $val;
     }
 
     public static function jwtSecret(): string
@@ -77,16 +80,8 @@ final class Config
         if (self::$envLoaded) { return; }
         $root = dirname(__DIR__, 3);
         $envFile = $root . '/.env';
-        if (is_file($envFile) && is_readable($envFile)) {
-            foreach (file($envFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) as $line) {
-                if (str_starts_with(trim($line), '#')) { continue; }
-                if (!str_contains($line, '=')) { continue; }
-                [$k, $v] = array_map('trim', explode('=', $line, 2));
-                $v = trim($v, "\"' ");
-                putenv("$k=$v");
-                $_ENV[$k] = $v;
-                $_SERVER[$k] = $v;
-            }
+        if (is_file($envFile)) {
+            (self::$dotenv ??= new Dotenv())->usePutenv(true)->load($envFile);
         }
         self::$envLoaded = true;
     }

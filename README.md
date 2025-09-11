@@ -9,6 +9,8 @@ A lightweight PHP API using Symfony components and Doctrine ORM with SQLite. Inc
 - ORM: Doctrine ORM 3 (attribute mappings) + SQLite (file DB)
 - Auth: JWT for all routes except `/auth/login`
 - Logging: All requests logged (success and error); admin endpoint to view logs
+- DI: [PHP-DI](https://php-di.org/) for autowiring services
+- Validation: [respect/validation](https://respect-validation.readthedocs.io/) for request input
 - Domain: Notes, Packages, Franchises with statuses, comments, links, and Tasks
 
 ## Quick start
@@ -35,6 +37,8 @@ php -S 127.0.0.1:8000 -t public
 ```
 
 ## Configuration
+
+Environment variables from `.env` are loaded automatically via the [symfony/dotenv](https://github.com/symfony/dotenv) component.
 
 - DB location: `var/data.sqlite`
 - JWT settings (override via `.env`):

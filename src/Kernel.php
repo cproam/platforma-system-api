@@ -11,7 +11,7 @@ use Symfony\Component\Routing\RouteCollection;
 use Symfony\Component\Routing\Matcher\UrlMatcher;
 use Symfony\Component\Routing\RequestContext;
 use Symfony\Component\Routing\Exception\ResourceNotFoundException;
-use App\Infrastructure\DI\Container;
+use Psr\Container\ContainerInterface;
 use App\Infrastructure\Security\JwtService;
 use Doctrine\ORM\EntityManagerInterface;
 use App\Entity\LogEntry;
@@ -19,7 +19,7 @@ use App\Entity\User;
 
 final class Kernel
 {
-    public function __construct(private readonly RouteCollection $routes, private readonly ?Container $container = null) {}
+    public function __construct(private readonly RouteCollection $routes, private readonly ?ContainerInterface $container = null) {}
 
     public function handle(Request $request): Response
     {
