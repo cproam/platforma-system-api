@@ -2,7 +2,7 @@
 
 namespace App\Infrastructure\Config;
 
-use App\Infrastructure\Config\Dotenv;
+use Symfony\Component\Dotenv\Dotenv;
 
 final class Config
 {
@@ -32,8 +32,8 @@ final class Config
     public static function env(string $name, ?string $default = null): ?string
     {
         self::ensureEnvLoaded();
-        $val = getenv($name);
-        return $val === false ? $default : $val;
+        $val = $_ENV[$name] ?? $_SERVER[$name] ?? getenv($name);
+        return $val === false || $val === null ? $default : $val;
     }
 
     public static function jwtSecret(): string
@@ -80,7 +80,9 @@ final class Config
         if (self::$envLoaded) { return; }
         $root = dirname(__DIR__, 3);
         $envFile = $root . '/.env';
-        (self::$dotenv ??= new Dotenv())->load($envFile);
+        if (is_file($envFile)) {
+            (self::$dotenv ??= new Dotenv())->usePutenv(true)->load($envFile);
+        }
         self::$envLoaded = true;
     }
 }

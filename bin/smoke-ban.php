@@ -2,11 +2,11 @@
 
 require_once __DIR__ . '/../vendor/autoload.php';
 
-use App\Infrastructure\DI\Container;
+use App\Infrastructure\DI\ContainerFactory;
 use App\Kernel;
 use Symfony\Component\HttpFoundation\Request;
 
-$container = new Container();
+$container = ContainerFactory::create();
 $routes = require __DIR__ . '/../config/routes.php';
 $kernel = new Kernel($routes, $container);
 

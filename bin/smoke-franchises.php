@@ -3,10 +3,10 @@
 require_once __DIR__ . '/../vendor/autoload.php';
 
 use App\Controller\FranchiseController;
-use App\Infrastructure\DI\Container;
+use App\Infrastructure\DI\ContainerFactory;
 use Symfony\Component\HttpFoundation\Request;
 
-$container = new Container();
+$container = ContainerFactory::create();
 $controller = $container->get(FranchiseController::class);
 
 // Create

@@ -2,11 +2,11 @@
 
 require_once __DIR__ . '/../vendor/autoload.php';
 
-use App\Infrastructure\DI\Container;
+use App\Infrastructure\DI\ContainerFactory;
 use App\Entity\Role;
 use App\Entity\User;
 
-$container = new Container();
+$container = ContainerFactory::create();
 /** @var Doctrine\ORM\EntityManagerInterface $em */
 $em = $container->get(Doctrine\ORM\EntityManagerInterface::class);
 

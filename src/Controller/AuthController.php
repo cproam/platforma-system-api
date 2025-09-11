@@ -7,23 +7,30 @@ use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use App\Infrastructure\Security\JwtService;
+use App\Infrastructure\Validation\Validator;
+use Respect\Validation\Validator as v;
 
 final class AuthController
 {
     public function __construct(
         private readonly EntityManagerInterface $em,
         private readonly JwtService $jwt,
+        private readonly Validator $validator,
     ) {}
 
     public function login(Request $request, array $params): JsonResponse
     {
         $data = json_decode($request->getContent() ?: '[]', true) ?: [];
-        $email = (string)($data['email'] ?? '');
-        $password = (string)($data['password'] ?? '');
+        $errors = $this->validator->validate($data, [
+            'email' => v::stringType()->notEmpty()->email(),
+            'password' => v::stringType()->notEmpty()->length(6, null),
+        ]);
 
-        if ($email === '' || $password === '') {
-            return new JsonResponse(['error' => 'email and password are required'], 400);
+        if ($errors !== []) {
+            return new JsonResponse(['errors' => $errors], 400);
         }
+        $email = (string)($data['email']);
+        $password = (string)($data['password']);
 
         $repo = $this->em->getRepository(User::class);
         /** @var User|null $user */
