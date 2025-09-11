@@ -1,3 +1,4 @@
 .env
 /vendor
 var/data.sqlite
+/.vscode
